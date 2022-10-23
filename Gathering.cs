@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Gathering : MonoBehaviour
@@ -24,53 +25,62 @@ public class Gathering : MonoBehaviour
     public bool isLoaded = false;
 
     //to assign worker to new resource type
-    string ResourceTypeToAssign; // bu bilgi oyuncudan alinacak
+    public string ResourceTypeToAssign; // bu bilgi oyuncudan alinacak
     GameObject[] ObjectsForSelectedResourceType;
     void Start()
     {
-        ResourceTypeToAssign = "Food"; 
-        NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
-        CurrentDestination = GetClosestEnemy(GameObject.FindGameObjectsWithTag(ResourceTypeToAssign));
-        CurrentResourceContainer = GetClosestEnemy(GameObject.FindGameObjectsWithTag("ResourceContainer"));
+        ResourceTypeToAssign = null;
+        if (ResourceTypeToAssign != null) {
+            NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
+            CurrentDestination = GetClosestEnemy(GameObject.FindGameObjectsWithTag(ResourceTypeToAssign));
+            CurrentResourceContainer = GetClosestEnemy(GameObject.FindGameObjectsWithTag("ResourceContainer"));
+        }
         animator = gameObject.GetComponent<Animator>();
     }
     // Update is called once per frame
     void Update()
     {
+        Debug.Log(ResourceTypeToAssign);
         //kaynak bittiyse depoya yollama ve durdurma
         if (NumberOfResourcePointLeft == 1) // sifir vermek yerine bir tane agaci haritada sakladim. obur turlu hata veriyor
         {
-            ResourceTypeToAssign = null;
+            gameObject.tag = "IdleWorker";       
         }
-        if (ResourceTypeToAssign == null)
+        if (gameObject.tag == "IdleWorker")
         {
             if (isLoaded)
             {
+                Debug.Log(transform.position);
+                Debug.Log(CurrentResourceContainer.transform.position);
                 transform.position = Vector3.MoveTowards(transform.position, CurrentResourceContainer.transform.position, speed * Time.deltaTime);
+         
             }
             else 
             {
                 animator.SetBool("isLoaded", false);
                 animator.SetBool("isIdle", true);
                 isIdle = true;
+                isLoaded = false;
             }
         }
 
-        if (ResourceTypeToAssign != null) 
+        if (gameObject.tag != "IdleWorker")
         {
-            NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
-            if (ResourceTypeToAssign == "Food") 
+
+            if (gameObject.tag == "FoodWorker")
             {
 
-                if (isIdle && !isLoaded) 
+                if (isIdle && !isLoaded)
                 {
+                    ResourceTypeToAssign = "Food";
+                    NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
                     WorkerAssignerToResource(ResourceTypeToAssign);
                     isIdle = false;
                 }
-                if (!isIdle && !isLoaded) 
+                if (!isIdle && !isLoaded && ResourceTypeToAssign != null)
                 {
                     CurrentDestination = GetClosestEnemy(GameObject.FindGameObjectsWithTag(ResourceTypeToAssign));
-                    transform.position = Vector3.MoveTowards(transform.position, CurrentDestination.transform.position, speed * Time.deltaTime);              
+                    transform.position = Vector3.MoveTowards(transform.position, CurrentDestination.transform.position, speed * Time.deltaTime);
                     WorkerRotater(CurrentDestination);
                 }
                 if (!isIdle && isLoaded || isIdle && isLoaded)
@@ -79,15 +89,50 @@ public class Gathering : MonoBehaviour
                     transform.position = Vector3.MoveTowards(transform.position, CurrentResourceContainer.transform.position, speed * Time.deltaTime);
                     WorkerRotater(CurrentResourceContainer);
                 }
-            
-                if (ResourceTypeToAssign == "Wood")
+            }
+            if (gameObject.tag == "WoodWorker")
+            {
+                if (isIdle && !isLoaded)
                 {
-
+                    ResourceTypeToAssign = "Wood";
+                    NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
+                    WorkerAssignerToResource(ResourceTypeToAssign);
+                    isIdle = false;
                 }
-                if (ResourceTypeToAssign == "Rock")
+                if (!isIdle && !isLoaded && ResourceTypeToAssign != null)
                 {
-
+                    CurrentDestination = GetClosestEnemy(GameObject.FindGameObjectsWithTag(ResourceTypeToAssign));
+                    transform.position = Vector3.MoveTowards(transform.position, CurrentDestination.transform.position, speed * Time.deltaTime);
+                    WorkerRotater(CurrentDestination);
                 }
+                if (!isIdle && isLoaded || isIdle && isLoaded)
+                {
+                    WorkerAssignerToDepot();
+                    transform.position = Vector3.MoveTowards(transform.position, CurrentResourceContainer.transform.position, speed * Time.deltaTime);
+                    WorkerRotater(CurrentResourceContainer);
+                }
+            }
+            if (gameObject.tag == "RockWorker")
+            {
+                if (isIdle && !isLoaded)
+                {
+                    ResourceTypeToAssign = "Rock";
+                    NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
+                    WorkerAssignerToResource(ResourceTypeToAssign);
+                    isIdle = false;
+                }
+                if (!isIdle && !isLoaded && ResourceTypeToAssign != null)
+                {
+                    CurrentDestination = GetClosestEnemy(GameObject.FindGameObjectsWithTag(ResourceTypeToAssign));
+                    transform.position = Vector3.MoveTowards(transform.position, CurrentDestination.transform.position, speed * Time.deltaTime);
+                    WorkerRotater(CurrentDestination);
+                }
+                if (!isIdle && isLoaded || isIdle && isLoaded)
+                {
+                    WorkerAssignerToDepot();
+                    transform.position = Vector3.MoveTowards(transform.position, CurrentResourceContainer.transform.position, speed * Time.deltaTime);
+                    WorkerRotater(CurrentResourceContainer);
+                }    
             }
         }  
     }
@@ -116,6 +161,7 @@ public class Gathering : MonoBehaviour
     }
     void WorkerRotater(GameObject TargetDestination)
     {
+        NumberOfResourcePointLeft = GameObject.FindGameObjectsWithTag(ResourceTypeToAssign).Length;
         // first part to rotate the worker
         Vector3 relativePos = TargetDestination.transform.position - transform.position;
         // the second argument, upwards, defaults to Vector3.up
